@@ -1,0 +1,105 @@
+﻿@page "/todo"
+@using BlazorSample
+@using TodoList.Services
+@rendermode InteractiveServer
+@inject TodoService todoService
+
+<PageTitle>Todo</PageTitle>
+
+<h1>Todo (@todoService.Todos.Count(todo => !todo.IsDone))</h1>
+
+<!-- Success message to indicate that a todo was added -->
+@if (isTodoAdded)
+{
+    <div class="alert alert-success" role="alert">
+        Todo added successfully!
+    </div>
+}
+
+<!-- Success message to indicate that a todo was marked as done -->
+@if (isTodoToggled)
+{
+    <div class="alert alert-succes" role="alert">
+        Todo status toggled succesfully!
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        @errorMessage
+    </div>
+}
+<ul>
+    @foreach (var todo in todoService.Todos)
+    {
+        <li>
+            <!-- Checkbox to mark the todo item as done -->
+            <input type="checkbox" @bind="todo.IsDone" @onclick="() => ToggleTodoStatus(todo)" aria-label="Mark as @(todo.IsDone ? "not done" : "done")"/>
+            <!-- Input field to edit the todo item's title -->
+            <input @bind="todo.Title" disabled="@todo.IsDone" aria-disabled="@todo.IsDone"/>
+        </li>
+    }
+</ul>
+
+<!-- Input field to add new todo items -->
+<input placeholder="Something todo" @bind="newTodo" @oninput="ValidateInput"/>
+<!-- Button to add a new todo item -->
+<button @onclick="AddTodo">Add todo</button>
+@code{
+    private string newTodo = ""; // Holds the title of the new todo item
+    private string errorMessage = ""; // Holds error messages to be displayed to the user
+    private bool isTodoAdded; // Flag to indicate if the todo was succesfully added
+    private bool isTodoToggled; // Flag to indicate if a todo's status was successfully toggled
+    private const int MinTitleLength = 3;  // Minimum allowed length for todo title
+    private const int MaxTitleLength = 50; // Maximum allowed length for todo title
+
+    // Method to add a new todo item
+    private void AddTodo()
+    {
+        // Error handling for null value or white space
+        if (string.IsNullOrWhiteSpace(newTodo))
+        {
+            errorMessage = "Please enter a title for the todo.";
+            return;
+        }
+
+        // Input validation for the title minimum and maximum allowed length
+        if (newTodo.Length < MinTitleLength || newTodo.Length > MaxTitleLength)
+        {
+            errorMessage = $"Title must be between {MinTitleLength} and {MaxTitleLength} characters long.";
+            return;
+        }
+
+        // Add the new todo item to the list
+        todoService.AddTodo(newTodo);
+        newTodo = string.Empty; // Clear the input field
+        errorMessage = string.Empty; // Clear any previous error message
+        isTodoAdded = true; // Set the flag to indicate succesful todo addition
+        isTodoToggled = false; // reset the flag for todo toggling
+    }
+
+    // Method to toggle the status (done/not done) of todo item
+    private void ToggleTodoStatus(TodoItem todo)
+    {
+        todoService.ToggleTodoStatus(todo);
+        isTodoToggled = true; // Set the flag to indicate successful todo toggling
+        isTodoAdded = false; // Reset the flag for todo addition
+    }
+
+    // Method to validate input length and trim it if necessary
+    private void ValidateInput(ChangeEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(newTodo) && newTodo.Length > MaxTitleLength)
+        {
+            // Trim the input to the maximum allowed length
+            newTodo = newTodo.Substring(0, MaxTitleLength);
+            errorMessage = $"Title must be at most {MaxTitleLength} characters long.";
+        }
+        else
+        {
+            errorMessage = string.Empty; // Clearn any previous error message
+        }
+    }
+
+}
